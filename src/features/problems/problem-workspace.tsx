@@ -6,20 +6,34 @@ import {
   ArrowLeft,
   Braces,
   CheckCircle2,
+  MessageSquare,
   Clock3,
   FileCode2,
   Loader2,
   MemoryStick,
   Play,
+  Star,
   RotateCcw,
+  Save,
   Send,
+  StickyNote,
   Terminal,
   XCircle,
 } from 'lucide-react';
 import { useRunCode } from '@/features/execution/run-code-api';
 import { useSubmitCode } from '@/features/submissions/submit-code-api';
 import { ApiError } from '@/lib/api-client';
-import { useProblem, type ProblemDetail, type ProblemLanguageConfig } from './problems-api';
+import {
+  useBookmarkProblem,
+  useCreateProblemComment,
+  useProblem,
+  useProblemComments,
+  useProblemNote,
+  useUnbookmarkProblem,
+  useUpsertProblemNote,
+  type ProblemDetail,
+  type ProblemLanguageConfig,
+} from './problems-api';
 
 function formatDifficulty(difficulty: ProblemDetail['difficulty']) {
   return difficulty.charAt(0) + difficulty.slice(1).toLowerCase();
@@ -29,11 +43,24 @@ function formatLanguage(language: ProblemLanguageConfig['language']) {
   return language === 'JAVASCRIPT' ? 'JavaScript' : 'Python';
 }
 
+function formatProgressStatus(status: NonNullable<ProblemDetail['progressStatus']>) {
+  if (status === 'SOLVED') return 'Solved';
+  if (status === 'ATTEMPTED') return 'Attempted';
+  return 'Not started';
+}
+
 function formatVerdict(verdict: string) {
   return verdict
     .split('_')
     .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
     .join(' ');
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('en', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }
 
 function formatJson(value: string) {
@@ -47,6 +74,243 @@ function formatJson(value: string) {
 function errorMessage(error: unknown) {
   if (error instanceof ApiError) return error.message;
   return 'Unable to load this problem right now.';
+}
+
+function ProblemBookmarkButton({ isBookmarked, slug }: { isBookmarked?: boolean; slug: string }) {
+  const bookmark = useBookmarkProblem(slug);
+  const unbookmark = useUnbookmarkProblem(slug);
+  const isPending = bookmark.isPending || unbookmark.isPending;
+  const error = bookmark.error ?? unbookmark.error;
+
+  function toggleBookmark() {
+    if (isBookmarked) {
+      unbookmark.mutate();
+      return;
+    }
+    bookmark.mutate();
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-2">
+      <button
+        type="button"
+        onClick={toggleBookmark}
+        disabled={isPending}
+        aria-pressed={Boolean(isBookmarked)}
+        aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+        className={
+          'inline-flex min-h-10 items-center justify-center gap-2 border px-3 text-[12px] font-extrabold ' +
+          (isBookmarked
+            ? 'border-[#c7dd96] bg-[#eef5de] text-[#55731f]'
+            : 'border-line bg-paper text-muted hover:text-ink')
+        }
+      >
+        {isPending ? (
+          <Loader2 size={14} className="animate-spin" />
+        ) : (
+          <Star size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
+        )}
+        {isBookmarked ? 'Bookmarked' : 'Bookmark'}
+      </button>
+      {error && <span className="text-[12px] leading-5 text-[#8f3a2e]">{errorMessage(error)}</span>}
+    </div>
+  );
+}
+
+function ProblemDiscussionPanel({ slug }: { slug: string }) {
+  const comments = useProblemComments(slug);
+  const createComment = useCreateProblemComment(slug);
+  const [content, setContent] = useState('');
+  const isUnauthorized =
+    createComment.error instanceof ApiError && createComment.error.status === 401;
+
+  function submitComment() {
+    if (!content.trim()) return;
+    createComment.mutate(
+      { content },
+      {
+        onSuccess: () => setContent(''),
+      },
+    );
+  }
+
+  return (
+    <div className="border-t border-line p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
+          <MessageSquare size={15} className="text-[#739830]" /> DISCUSSION
+        </div>
+        {comments.data && (
+          <span className="font-mono text-[10px] text-muted">
+            {comments.data.items.length} comments
+          </span>
+        )}
+      </div>
+
+      <div className="mb-4 space-y-3">
+        <textarea
+          aria-label="Discussion comment"
+          value={content}
+          onChange={(event) => {
+            setContent(event.target.value);
+            createComment.reset();
+          }}
+          maxLength={2000}
+          placeholder="Share an approach, edge case, or clarification."
+          className="min-h-28 w-full resize-y border border-line bg-paper p-4 text-[13px] leading-7 text-ink outline-none placeholder:text-muted focus:border-[#739830]"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="font-mono text-[10px] text-muted">{content.length}/2000</span>
+          <button
+            type="button"
+            onClick={submitComment}
+            disabled={createComment.isPending || !content.trim()}
+            className="inline-flex min-h-10 items-center justify-center gap-2 bg-ink px-4 text-[12px] font-extrabold text-white hover:bg-[#34382f] disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {createComment.isPending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <MessageSquare size={14} />
+            )}
+            {createComment.isPending ? 'Posting' : 'Post comment'}
+          </button>
+        </div>
+        {isUnauthorized ? (
+          <div className="border border-line bg-paper p-3 text-[13px] leading-6 text-muted">
+            <Link href="/login" className="font-extrabold text-ink underline underline-offset-4">
+              Login
+            </Link>{' '}
+            to join the discussion.
+          </div>
+        ) : createComment.isError ? (
+          <div className="flex items-start gap-2 text-[12px] leading-5 text-[#8f3a2e]">
+            <XCircle size={14} />
+            <span>{errorMessage(createComment.error)}</span>
+          </div>
+        ) : null}
+      </div>
+
+      {comments.isLoading ? (
+        <div className="flex min-h-24 items-center gap-3 border border-line bg-paper p-4 font-mono text-[11px] text-muted">
+          <Loader2 size={15} className="animate-spin text-[#739830]" /> Loading discussion
+        </div>
+      ) : comments.isError ? (
+        <div className="flex items-start gap-3 border border-[#e1b4aa] bg-[#fff5f2] p-4 text-[13px] leading-6 text-[#8f3a2e]">
+          <XCircle size={16} />
+          <span>{errorMessage(comments.error)}</span>
+        </div>
+      ) : comments.data?.items.length === 0 ? (
+        <div className="border border-line bg-paper p-4 text-[13px] leading-6 text-muted">
+          No comments yet.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {comments.data?.items.map((comment) => (
+            <article className="border border-line bg-paper p-4" key={comment.id}>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="font-mono text-[10px] font-semibold text-[#55731f]">
+                  {comment.author.name || 'CodeArena User'}
+                </span>
+                <span className="font-mono text-[10px] text-muted">
+                  {formatDateTime(comment.createdAt)}
+                </span>
+              </div>
+              <p className="whitespace-pre-wrap text-[13px] leading-7 text-muted">
+                {comment.content}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProblemNotesEditor({ initialContent, slug }: { initialContent: string; slug: string }) {
+  const upsertNote = useUpsertProblemNote(slug);
+  const [content, setContent] = useState(initialContent);
+
+  function saveNote() {
+    upsertNote.mutate({ content });
+  }
+
+  return (
+    <div className="space-y-3">
+      <textarea
+        aria-label="Private problem notes"
+        value={content}
+        onChange={(event) => {
+          setContent(event.target.value);
+          upsertNote.reset();
+        }}
+        maxLength={10000}
+        placeholder="Capture edge cases, patterns, or a better approach for your next attempt."
+        className="min-h-38 w-full resize-y border border-line bg-paper p-4 text-[13px] leading-7 text-ink outline-none placeholder:text-muted focus:border-[#739830]"
+      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="font-mono text-[10px] text-muted">{content.length}/10000</span>
+        <button
+          type="button"
+          onClick={saveNote}
+          disabled={upsertNote.isPending}
+          className="inline-flex min-h-10 items-center justify-center gap-2 bg-ink px-4 text-[12px] font-extrabold text-white hover:bg-[#34382f] disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          {upsertNote.isPending ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Save size={14} />
+          )}
+          {upsertNote.isPending ? 'Saving' : 'Save note'}
+        </button>
+      </div>
+      {upsertNote.isSuccess && (
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-semibold text-[#55731f]">
+          <CheckCircle2 size={13} /> Saved
+        </span>
+      )}
+      {upsertNote.isError && (
+        <div className="flex items-start gap-2 text-[12px] leading-5 text-[#8f3a2e]">
+          <XCircle size={14} />
+          <span>{errorMessage(upsertNote.error)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProblemNotesPanel({ slug }: { slug: string }) {
+  const noteQuery = useProblemNote(slug);
+  const isUnauthorized = noteQuery.error instanceof ApiError && noteQuery.error.status === 401;
+
+  return (
+    <div className="border-t border-line p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
+          <StickyNote size={15} className="text-[#739830]" /> PRIVATE NOTES
+        </div>
+      </div>
+
+      {noteQuery.isLoading ? (
+        <div className="flex min-h-34 items-center gap-3 border border-line bg-paper p-4 font-mono text-[11px] text-muted">
+          <Loader2 size={15} className="animate-spin text-[#739830]" /> Loading notes
+        </div>
+      ) : isUnauthorized ? (
+        <div className="border border-line bg-paper p-4 text-[13px] leading-6 text-muted">
+          <Link href="/login" className="font-extrabold text-ink underline underline-offset-4">
+            Login
+          </Link>{' '}
+          to save private notes for this problem.
+        </div>
+      ) : noteQuery.isError ? (
+        <div className="flex items-start gap-3 border border-[#e1b4aa] bg-[#fff5f2] p-4 text-[13px] leading-6 text-[#8f3a2e]">
+          <XCircle size={16} />
+          <span>{errorMessage(noteQuery.error)}</span>
+        </div>
+      ) : (
+        <ProblemNotesEditor initialContent={noteQuery.data?.note?.content ?? ''} slug={slug} />
+      )}
+    </div>
+  );
 }
 
 export function ProblemWorkspace({ slug }: { slug: string }) {
@@ -135,6 +399,12 @@ export function ProblemWorkspace({ slug }: { slug: string }) {
               <ArrowLeft size={15} /> Problem list
             </Link>
             <Link
+              href="/profile"
+              className="inline-flex items-center gap-2 text-[12px] font-extrabold text-muted hover:text-ink"
+            >
+              Profile
+            </Link>
+            <Link
               href="/logout"
               className="inline-flex items-center gap-2 text-[12px] font-extrabold text-muted hover:text-ink"
             >
@@ -158,10 +428,39 @@ export function ProblemWorkspace({ slug }: { slug: string }) {
               <span className="inline-flex items-center gap-2 bg-paper px-2.5 py-1 font-mono text-[10px] text-muted ring-1 ring-line">
                 <MemoryStick size={13} /> {problem.memoryLimitMb}MB
               </span>
+              {problem.progressStatus && (
+                <span
+                  className={
+                    'inline-flex items-center gap-2 px-2.5 py-1 font-mono text-[10px] font-semibold ring-1 ' +
+                    (problem.progressStatus === 'SOLVED'
+                      ? 'bg-[#eef5de] text-[#55731f] ring-[#cfe3a9]'
+                      : problem.progressStatus === 'ATTEMPTED'
+                        ? 'bg-[#fff2d8] text-[#82621d] ring-[#eed59f]'
+                        : 'bg-paper text-muted ring-line')
+                  }
+                >
+                  {formatProgressStatus(problem.progressStatus)}
+                </span>
+              )}
             </div>
-            <h1 className="text-[38px] font-extrabold leading-tight max-[560px]:text-[30px]">
-              {problem.title}
-            </h1>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <h1 className="text-[38px] font-extrabold leading-tight max-[560px]:text-[30px]">
+                {problem.title}
+              </h1>
+              <ProblemBookmarkButton isBookmarked={problem.isBookmarked} slug={problem.slug} />
+            </div>
+            {problem.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {problem.tags.map((tag) => (
+                  <span
+                    className="bg-[#eef5de] px-2.5 py-1 font-mono text-[10px] font-semibold text-[#55731f]"
+                    key={tag.id}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
             <p className="mt-4 whitespace-pre-wrap text-[15px] leading-8 text-muted">
               {problem.description}
             </p>
@@ -200,6 +499,10 @@ export function ProblemWorkspace({ slug }: { slug: string }) {
               ))}
             </div>
           </div>
+
+          <ProblemNotesPanel slug={problem.slug} />
+
+          <ProblemDiscussionPanel slug={problem.slug} />
         </section>
 
         <section className="min-w-0 overflow-hidden rounded-[5px] border border-[#353b2f] bg-[#242922] text-[#d4dbca]">

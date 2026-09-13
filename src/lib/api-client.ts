@@ -3,7 +3,7 @@ import { clearAccessToken, getAccessToken, setAccessToken } from '@/lib/auth-ses
 
 type ApiRequestOptions = {
   path: string;
-  query?: Record<string, string | number | undefined>;
+  query?: Record<string, string | number | boolean | undefined>;
   init?: RequestInit;
 };
 
@@ -126,5 +126,36 @@ export async function apiPost<TResponse, TBody>(path: string, body: TBody, init?
       ...init?.headers,
     },
     body: JSON.stringify(body),
+  });
+}
+
+export async function apiPatch<TResponse, TBody>(path: string, body: TBody, init?: RequestInit) {
+  return apiRequest<TResponse>(createUrl(path), {
+    ...init,
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...init?.headers,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiPut<TResponse, TBody>(path: string, body: TBody, init?: RequestInit) {
+  return apiRequest<TResponse>(createUrl(path), {
+    ...init,
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...init?.headers,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiDelete<TResponse>(path: string, init?: RequestInit) {
+  return apiRequest<TResponse>(createUrl(path), {
+    ...init,
+    method: 'DELETE',
   });
 }

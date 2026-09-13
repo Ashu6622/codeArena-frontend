@@ -4,6 +4,8 @@ export type PreviewProblem = {
   title: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   topics: string[];
+  progressStatus?: 'SOLVED' | 'ATTEMPTED' | 'NOT_STARTED';
+  isBookmarked?: boolean;
   description: string;
   inputLabel: string;
   input: string;

@@ -18,7 +18,7 @@ Auth endpoints are not retried through refresh:
 
 ## Auth-Aware Navigation
 
-The landing page reads the shared auth session state. Logged-out users see Login and Create account. Logged-in users see Submissions, Logout, and View submissions.
+The landing page reads the shared auth session state. Logged-out users see Login and Create account. Logged-in users see Profile, Submissions, Logout, and View submissions.
 
 Session changes dispatch a browser event after localStorage updates so visible navigation can update in the current tab.
 
@@ -35,8 +35,8 @@ Session changes dispatch a browser event after localStorage updates so visible n
 
 ## Verification
 
-Pending: run `npm run quality`, `npm test`, and `npm run build` after formatting.
+`npm run quality`, `npm test`, and `npm run build` passed. Playwright covers logged-in/logged-out navigation, refresh-on-401 retry, token replacement, failed-refresh token clearing, and login-required protected-page UI.
 
 ## Next Step
 
-Add a small profile/session provider when the app needs the current user's email, role, or admin-only navigation.
+The profile page is documented in `profile-page.md`. Next, use the profile role to build admin-only UI.

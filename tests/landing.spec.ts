@@ -24,6 +24,11 @@ test('landing renders without browser errors, overflow, or missing assets', asyn
     await expect(
       page
         .getByRole('navigation', { name: 'Mobile navigation' })
+        .getByRole('link', { name: 'Leaderboard' }),
+    ).toHaveAttribute('href', '/leaderboard');
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Mobile navigation' })
         .getByRole('link', { name: 'Login' }),
     ).toHaveAttribute('href', '/login');
     await expect(
@@ -33,6 +38,11 @@ test('landing renders without browser errors, overflow, or missing assets', asyn
     ).toHaveCount(0);
     await page.getByRole('button', { name: 'Close navigation' }).click();
   } else {
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Main navigation' })
+        .getByRole('link', { name: 'Leaderboard' }),
+    ).toHaveAttribute('href', '/leaderboard');
     await expect(
       page
         .getByRole('navigation', { name: 'Main navigation' })
@@ -61,6 +71,104 @@ test('landing renders without browser errors, overflow, or missing assets', asyn
   expect(errors).toEqual([]);
 });
 
+test('landing filters backend problems by progress for logged-in users', async ({ page }) => {
+  await page.unroute('**/problems*');
+  await page.addInitScript(() => {
+    window.localStorage.setItem('codearena_access_token', 'landing-access-token');
+  });
+  await page.route('http://localhost:4000/problems?limit=20&language=JAVASCRIPT', async (route) => {
+    expect(route.request().headers().authorization).toBe('Bearer landing-access-token');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [
+          {
+            id: 'problem-id',
+            title: 'Two Sum',
+            slug: 'two-sum',
+            difficulty: 'EASY',
+            timeLimitMs: 1000,
+            memoryLimitMb: 128,
+            languages: ['JAVASCRIPT'],
+            tags: [{ id: 'tag-array-id', name: 'Array', slug: 'array' }],
+            progressStatus: 'NOT_STARTED',
+            isBookmarked: false,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      }),
+    });
+  });
+  await page.route(
+    'http://localhost:4000/problems?limit=20&language=JAVASCRIPT&bookmarked=true',
+    async (route) => {
+      expect(route.request().headers().authorization).toBe('Bearer landing-access-token');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              id: 'problem-id',
+              title: 'Two Sum',
+              slug: 'two-sum',
+              difficulty: 'EASY',
+              timeLimitMs: 1000,
+              memoryLimitMb: 128,
+              languages: ['JAVASCRIPT'],
+              tags: [{ id: 'tag-array-id', name: 'Array', slug: 'array' }],
+              progressStatus: 'SOLVED',
+              isBookmarked: true,
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    'http://localhost:4000/problems?limit=20&language=JAVASCRIPT&progressStatus=SOLVED',
+    async (route) => {
+      expect(route.request().headers().authorization).toBe('Bearer landing-access-token');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              id: 'problem-id',
+              title: 'Two Sum',
+              slug: 'two-sum',
+              difficulty: 'EASY',
+              timeLimitMs: 1000,
+              memoryLimitMb: 128,
+              languages: ['JAVASCRIPT'],
+              tags: [{ id: 'tag-array-id', name: 'Array', slug: 'array' }],
+              progressStatus: 'SOLVED',
+              isBookmarked: true,
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        }),
+      });
+    },
+  );
+
+  await page.goto('/#problems');
+  const problemRow = page.getByRole('link', { name: 'Open Two Sum' });
+  await expect(problemRow.getByText('Not started')).toBeVisible();
+  await page.getByRole('button', { name: 'Solved' }).click();
+  await expect(problemRow.getByText('Solved')).toBeVisible();
+  await page.getByRole('button', { name: 'All progress' }).click();
+  await page
+    .getByRole('group', { name: 'Filter bookmarks' })
+    .getByRole('button', { name: 'Bookmarked', exact: true })
+    .click();
+  await expect(problemRow.getByText('Bookmarked')).toBeVisible();
+});
+
 test('landing navigation switches after login token exists', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('codearena_access_token', 'landing-access-token');
@@ -71,6 +179,10 @@ test('landing navigation switches after login token exists', async ({ page }) =>
   if ((page.viewportSize()?.width ?? 1440) <= 760) {
     await page.getByRole('button', { name: 'Open navigation' }).click();
     const mobileNav = page.getByRole('navigation', { name: 'Mobile navigation' });
+    await expect(mobileNav.getByRole('link', { name: 'Profile' })).toHaveAttribute(
+      'href',
+      '/profile',
+    );
     await expect(mobileNav.getByRole('link', { name: 'Submissions' })).toHaveAttribute(
       'href',
       '/submissions',
@@ -82,6 +194,10 @@ test('landing navigation switches after login token exists', async ({ page }) =>
     await expect(mobileNav.getByRole('link', { name: 'Login' })).toHaveCount(0);
   } else {
     const mainNav = page.getByRole('navigation', { name: 'Main navigation' });
+    await expect(mainNav.getByRole('link', { name: 'Profile' })).toHaveAttribute(
+      'href',
+      '/profile',
+    );
     await expect(mainNav.getByRole('link', { name: 'Submissions' })).toHaveAttribute(
       'href',
       '/submissions',

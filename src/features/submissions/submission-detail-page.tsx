@@ -96,6 +96,9 @@ export function SubmissionDetailPage({ id }: { id: string }) {
             >
               <ArrowLeft size={15} /> Submissions
             </Link>
+            <Link href="/profile" className="text-[12px] font-extrabold text-muted hover:text-ink">
+              Profile
+            </Link>
             <Link href="/logout" className="text-[12px] font-extrabold text-muted hover:text-ink">
               Logout
             </Link>

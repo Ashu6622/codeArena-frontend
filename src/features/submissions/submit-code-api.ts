@@ -49,6 +49,27 @@ export type SubmissionDetail = SubmissionListItem & {
   problem: Required<SubmissionProblem>;
 };
 
+export type SubmissionActivityDay = {
+  date: string;
+  count: number;
+};
+
+export type SubmissionStatsResponse = {
+  solvedCount: number;
+  attemptedCount: number;
+  submissionCount: number;
+  acceptedSubmissionCount: number;
+  acceptanceRate: number;
+};
+
+export type SubmissionActivityResponse = {
+  from: string;
+  to: string;
+  totalSubmissions: number;
+  maxCount: number;
+  days: SubmissionActivityDay[];
+};
+
 export type SubmitCodeResponse = {
   submission: {
     id: string;
@@ -82,6 +103,8 @@ export const submissionsQueryKeys = {
   list: (problemSlug?: string) =>
     [...submissionsQueryKeys.all, 'list', problemSlug ?? 'all'] as const,
   detail: (id: string) => [...submissionsQueryKeys.all, 'detail', id] as const,
+  stats: () => [...submissionsQueryKeys.all, 'stats'] as const,
+  activity: () => [...submissionsQueryKeys.all, 'activity'] as const,
 };
 
 export function useSubmitCode() {
@@ -107,5 +130,23 @@ export function useSubmission(id: string) {
     queryKey: submissionsQueryKeys.detail(id),
     queryFn: () => apiGet<SubmissionDetail>({ path: '/submissions/' + id }),
     enabled: id.length > 0,
+  });
+}
+
+export function useSubmissionStats() {
+  return useQuery({
+    queryKey: submissionsQueryKeys.stats(),
+    queryFn: () => apiGet<SubmissionStatsResponse>({ path: '/submissions/stats' }),
+  });
+}
+
+export function useSubmissionActivity() {
+  return useQuery({
+    queryKey: submissionsQueryKeys.activity(),
+    queryFn: () =>
+      apiGet<SubmissionActivityResponse>({
+        path: '/submissions/activity',
+        query: { days: 365 },
+      }),
   });
 }

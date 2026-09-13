@@ -40,7 +40,12 @@ function toPreviewProblem(problem: ProblemListItem, index: number): PreviewProbl
     title: problem.title,
     difficulty:
       problem.difficulty === 'EASY' ? 'Easy' : problem.difficulty === 'MEDIUM' ? 'Medium' : 'Hard',
-    topics: preview?.topics ?? problem.languages.map((language) => language.toLowerCase()),
+    topics:
+      problem.tags.length > 0
+        ? problem.tags.map((tag) => tag.name)
+        : (preview?.topics ?? problem.languages.map((language) => language.toLowerCase())),
+    progressStatus: problem.progressStatus,
+    isBookmarked: problem.isBookmarked,
     description: preview?.description ?? 'Open the full workspace to read this problem statement.',
     inputLabel: preview?.inputLabel ?? 'input',
     input: preview?.input ?? '{}',
@@ -50,6 +55,12 @@ function toPreviewProblem(problem: ProblemListItem, index: number): PreviewProbl
     complexity: preview?.complexity ?? 'O(?)',
     code: preview?.code ?? `function solution(input) {\n  // TODO\n}`,
   };
+}
+
+function formatProgressStatus(status: NonNullable<ProblemListItem['progressStatus']>) {
+  if (status === 'SOLVED') return 'Solved';
+  if (status === 'ATTEMPTED') return 'Attempted';
+  return 'Not started';
 }
 
 function HighlightedCode({ code }: { code: string }) {
@@ -375,6 +386,25 @@ function Playground({ problem }: { problem: PreviewProblem }) {
   );
 }
 
+const bookmarkFilters = [
+  { label: 'All saved' },
+  { label: 'Bookmarked', bookmarked: true },
+  { label: 'Not bookmarked', bookmarked: false },
+] as const;
+
+const progressFilters = [
+  { label: 'All progress' },
+  { label: 'Solved', status: 'SOLVED' },
+  { label: 'Attempted', status: 'ATTEMPTED' },
+  { label: 'Not started', status: 'NOT_STARTED' },
+] as const;
+
+const problemFilters = [
+  { label: 'All problems' },
+  { label: 'Arrays', slug: 'array', matches: ['array', 'arrays'] },
+  { label: 'Strings', slug: 'string', matches: ['string', 'strings'] },
+] as const;
+
 const questions = [
   [
     'What is CodeArena?',
@@ -397,6 +427,8 @@ const questions = [
 export function LandingPage() {
   const selected = previewProblems[0];
   const [filter, setFilter] = useState('All problems');
+  const [progressFilter, setProgressFilter] = useState('All progress');
+  const [bookmarkFilter, setBookmarkFilter] = useState('All saved');
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -405,18 +437,45 @@ export function LandingPage() {
     hasAccessToken,
     getServerAuthSnapshot,
   );
+  const selectedFilter = problemFilters.find((item) => item.label === filter) ?? problemFilters[0];
+  const selectedProgressFilter =
+    progressFilters.find((item) => item.label === progressFilter) ?? progressFilters[0];
+  const selectedBookmarkFilter =
+    bookmarkFilters.find((item) => item.label === bookmarkFilter) ?? bookmarkFilters[0];
   const { data, isError, isLoading } = useProblems({
     limit: 20,
     language: 'JAVASCRIPT',
+    tag: 'slug' in selectedFilter ? selectedFilter.slug : undefined,
+    progressStatus:
+      isAuthenticated && 'status' in selectedProgressFilter
+        ? selectedProgressFilter.status
+        : undefined,
+    bookmarked:
+      isAuthenticated && 'bookmarked' in selectedBookmarkFilter
+        ? selectedBookmarkFilter.bookmarked
+        : undefined,
     search: query.trim() || undefined,
   });
   const apiProblems = data?.items.map(toPreviewProblem) ?? [];
   const sourceProblems = apiProblems.length > 0 ? apiProblems : previewProblems;
-  const visibleProblems = sourceProblems.filter(
-    (problem) =>
-      (filter === 'All problems' || problem.topics.includes(filter)) &&
-      (problem.title + ' ' + problem.topics.join(' ')).toLowerCase().includes(query.toLowerCase()),
-  );
+  const visibleProblems = sourceProblems.filter((problem) => {
+    const topics = problem.topics.map((topic) => topic.toLowerCase());
+    const matchesFilter =
+      !('matches' in selectedFilter) ||
+      topics.some((topic) => (selectedFilter.matches as readonly string[]).includes(topic));
+    const matchesProgress =
+      !isAuthenticated ||
+      !('status' in selectedProgressFilter) ||
+      problem.progressStatus === selectedProgressFilter.status;
+    const matchesBookmark =
+      !isAuthenticated ||
+      !('bookmarked' in selectedBookmarkFilter) ||
+      problem.isBookmarked === selectedBookmarkFilter.bookmarked;
+    const matchesSearch = (problem.title + ' ' + problem.topics.join(' '))
+      .toLowerCase()
+      .includes(query.toLowerCase());
+    return matchesFilter && matchesProgress && matchesBookmark && matchesSearch;
+  });
   const totalProblems = data?.pagination.total ?? sourceProblems.length;
 
   return (
@@ -436,12 +495,14 @@ export function LandingPage() {
           </Link>
           <nav className="desktop-nav" aria-label="Main navigation">
             <a href="#problems">Problems</a>
+            <Link href="/leaderboard">Leaderboard</Link>
             <a href="#process">The process</a>
             <a href="#faq">FAQs</a>
             {isAuthenticated ? (
               <>
+                <Link href="/profile">Profile</Link>
                 <Link href="/submissions">Submissions</Link>
-                <a href="/logout">Logout</a>
+                <Link href="/logout">Logout</Link>
               </>
             ) : (
               <a href="/login">Login</a>
@@ -465,6 +526,9 @@ export function LandingPage() {
             <a href="#problems" onClick={() => setMenuOpen(false)}>
               Problems <ArrowUpRight size={16} />
             </a>
+            <Link href="/leaderboard" onClick={() => setMenuOpen(false)}>
+              Leaderboard <ArrowUpRight size={16} />
+            </Link>
             <a href="#process" onClick={() => setMenuOpen(false)}>
               The process <ArrowUpRight size={16} />
             </a>
@@ -473,12 +537,15 @@ export function LandingPage() {
             </a>
             {isAuthenticated ? (
               <>
+                <Link href="/profile" onClick={() => setMenuOpen(false)}>
+                  Profile <ArrowUpRight size={16} />
+                </Link>
                 <Link href="/submissions" onClick={() => setMenuOpen(false)}>
                   Submissions <ArrowUpRight size={16} />
                 </Link>
-                <a href="/logout" onClick={() => setMenuOpen(false)}>
+                <Link href="/logout" onClick={() => setMenuOpen(false)}>
                   Logout <ArrowUpRight size={16} />
-                </a>
+                </Link>
               </>
             ) : (
               <>
@@ -621,7 +688,7 @@ export function LandingPage() {
             </div>
             <div className="problem-filters">
               <div className="filter-tabs" role="group" aria-label="Filter problems">
-                {['All problems', 'Arrays', 'Strings'].map((item) => (
+                {problemFilters.map(({ label: item }) => (
                   <button
                     key={item}
                     className={filter === item ? 'selected' : ''}
@@ -633,6 +700,34 @@ export function LandingPage() {
                   </button>
                 ))}
               </div>
+              {isAuthenticated && (
+                <>
+                  <div className="progress-filter-tabs" role="group" aria-label="Filter progress">
+                    {progressFilters.map(({ label: item }) => (
+                      <button
+                        key={item}
+                        className={progressFilter === item ? 'selected' : ''}
+                        aria-pressed={progressFilter === item}
+                        onClick={() => setProgressFilter(item)}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="progress-filter-tabs" role="group" aria-label="Filter bookmarks">
+                    {bookmarkFilters.map(({ label: item }) => (
+                      <button
+                        key={item}
+                        className={bookmarkFilter === item ? 'selected' : ''}
+                        aria-pressed={bookmarkFilter === item}
+                        onClick={() => setBookmarkFilter(item)}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
               <label className="problem-search">
                 <Search size={16} />
                 <input
@@ -667,7 +762,17 @@ export function LandingPage() {
                 >
                   <span className="problem-name">
                     <span className="problem-number">{problem.number}</span>
-                    <strong>{problem.title}</strong>
+                    <span>
+                      <strong>{problem.title}</strong>
+                      {problem.progressStatus && (
+                        <span className={'progress-chip ' + problem.progressStatus.toLowerCase()}>
+                          {formatProgressStatus(problem.progressStatus)}
+                        </span>
+                      )}
+                      {problem.isBookmarked && (
+                        <span className="progress-chip solved">Bookmarked</span>
+                      )}
+                    </span>
                   </span>
                   <span className="topic-tags">
                     {problem.topics.map((topic) => (
@@ -693,6 +798,8 @@ export function LandingPage() {
                     onClick={() => {
                       setQuery('');
                       setFilter('All problems');
+                      setProgressFilter('All progress');
+                      setBookmarkFilter('All saved');
                     }}
                   >
                     Clear filters <RotateCcw size={14} />
