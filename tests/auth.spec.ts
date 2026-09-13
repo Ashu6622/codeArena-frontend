@@ -195,10 +195,18 @@ test('profile loads the current user and shows account links', async ({ page }) 
   await expect(page.getByText('3 submissions · 2026-09-05 to 2026-09-11')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Saved problems' })).toBeVisible();
   await expect(page.getByText('1 saved')).toBeVisible();
-  const savedProblem = page.getByRole('link', { name: 'Open saved problem Two Sum' });
-  await expect(savedProblem).toHaveAttribute('href', '/problems/two-sum');
-  await expect(savedProblem.getByText('Attempted')).toBeVisible();
-  await expect(savedProblem.getByText('Array')).toBeVisible();
+  const savedProblems = page.locator('section').filter({
+    has: page.getByRole('heading', { name: 'Saved problems' }),
+  });
+  await expect(
+    savedProblems.getByRole('link', { name: 'Open saved problem Two Sum' }),
+  ).toHaveAttribute('href', '/problems/two-sum');
+  await expect(
+    savedProblems.getByRole('link', { name: 'Open private note for Two Sum' }),
+  ).toHaveAttribute('href', '/problems/two-sum/notes');
+  const savedProblemCard = savedProblems.getByRole('article');
+  await expect(savedProblemCard.getByText('Attempted')).toBeVisible();
+  await expect(savedProblemCard.getByText('Array')).toBeVisible();
   await page.getByLabel('2 submissions on Sep 10, 2026').focus();
   await expect(page.getByText('2 submissions on Sep 10, 2026')).toBeVisible();
   const quickLinks = page.locator('section').filter({

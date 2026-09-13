@@ -1,4 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function setCodeEditorValue(page: Page, value: string) {
+  await page.getByLabel('Code editor value').fill(value);
+}
 
 const problem = {
   id: 'problem-id',
@@ -238,9 +242,17 @@ test('problem workspace renders backend details and starter code', async ({ page
   await expect(page.getByText('twoSum(nums: number[], target: number): number[]')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile');
   await expect(page.getByRole('link', { name: 'Logout' })).toHaveAttribute('href', '/logout');
+  await expect(page.getByRole('link', { name: 'Open note' })).toHaveAttribute(
+    'href',
+    '/problems/two-sum/notes',
+  );
+  await expect(page.getByRole('link', { name: 'View discussion' })).toHaveAttribute(
+    'href',
+    '/problems/two-sum/discussions',
+  );
   await page.getByRole('button', { name: 'Add bookmark' }).click();
   await expect(page.getByRole('button', { name: 'Remove bookmark' })).toBeVisible();
-  await expect(page.getByLabel('Code editor')).toHaveValue(
+  await expect(page.getByLabel('Code editor value')).toHaveValue(
     'function twoSum(nums, target) {\n  // TODO\n}',
   );
   await expect(page.getByText('"nums": [')).toBeVisible();
@@ -257,7 +269,7 @@ test('problem workspace renders backend details and starter code', async ({ page
   await page.getByRole('button', { name: 'Save note' }).click();
   await expect(page.getByText('Saved')).toBeVisible();
 
-  await page.getByLabel('Code editor').fill('function twoSum(nums, target) {\n  return [0, 1];\n}');
+  await setCodeEditorValue(page, 'function twoSum(nums, target) {\n  return [0, 1];\n}');
   await page.getByRole('button', { name: 'Run' }).click();
   await expect(page.getByText('Accepted').first()).toBeVisible();
   await expect(page.getByText('1/1 passed · 11ms')).toBeVisible();
@@ -276,9 +288,9 @@ test('problem workspace renders backend details and starter code', async ({ page
   await expect(page.getByText('1/1 passed').last()).toBeVisible();
   await expect(page.getByText('hidden-secret')).not.toBeVisible();
 
-  await page.getByLabel('Code editor').fill('function twoSum() {\n  return [];\n}');
+  await setCodeEditorValue(page, 'function twoSum() {\n  return [];\n}');
   await page.getByRole('button', { name: 'Reset' }).click();
-  await expect(page.getByLabel('Code editor')).toHaveValue(
+  await expect(page.getByLabel('Code editor value')).toHaveValue(
     'function twoSum(nums, target) {\n  // TODO\n}',
   );
 });

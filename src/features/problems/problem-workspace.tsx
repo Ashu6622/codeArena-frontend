@@ -21,6 +21,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useRunCode } from '@/features/execution/run-code-api';
+import { CodeEditor } from './code-editor';
 import { useSubmitCode } from '@/features/submissions/submit-code-api';
 import { ApiError } from '@/lib/api-client';
 import {
@@ -140,11 +141,19 @@ function ProblemDiscussionPanel({ slug }: { slug: string }) {
         <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
           <MessageSquare size={15} className="text-[#739830]" /> DISCUSSION
         </div>
-        {comments.data && (
-          <span className="font-mono text-[10px] text-muted">
-            {comments.data.items.length} comments
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {comments.data && (
+            <span className="font-mono text-[10px] text-muted">
+              {comments.data.items.length} comments
+            </span>
+          )}
+          <Link
+            href={'/problems/' + slug + '/discussions'}
+            className="font-mono text-[10px] font-semibold text-[#55731f] underline underline-offset-4"
+          >
+            View discussion
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 space-y-3">
@@ -288,6 +297,12 @@ function ProblemNotesPanel({ slug }: { slug: string }) {
         <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
           <StickyNote size={15} className="text-[#739830]" /> PRIVATE NOTES
         </div>
+        <Link
+          href={'/problems/' + slug + '/notes'}
+          className="font-mono text-[10px] font-semibold text-[#55731f] underline underline-offset-4"
+        >
+          Open note
+        </Link>
       </div>
 
       {noteQuery.isLoading ? (
@@ -546,16 +561,14 @@ export function ProblemWorkspace({ slug }: { slug: string }) {
             </span>
           </div>
 
-          <textarea
-            aria-label="Code editor"
+          <CodeEditor
             value={code}
-            onChange={(event) => {
-              setCodeDraft(event.target.value);
+            language={language.language}
+            onChange={(nextCode) => {
+              setCodeDraft(nextCode);
               runCode.reset();
               submitCode.reset();
             }}
-            spellCheck={false}
-            className="min-h-[520px] w-full resize-y border-0 bg-[#181c17] p-5 font-mono text-[13px] leading-7 text-[#eef4e8] outline-none selection:bg-lime selection:text-ink max-[560px]:min-h-[420px]"
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#3d4638] px-4 py-3">

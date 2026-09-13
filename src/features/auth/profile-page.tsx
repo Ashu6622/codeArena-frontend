@@ -7,6 +7,7 @@ import {
   FilePlus2,
   Loader2,
   Star,
+  StickyNote,
   Tags,
   LogOut,
   Percent,
@@ -98,12 +99,7 @@ function SavedProblems() {
       ) : (
         <div className="grid gap-3">
           {savedProblems.data.items.map((problem) => (
-            <Link
-              href={'/problems/' + problem.slug}
-              className="block border border-line bg-paper p-4 hover:bg-[#f5f7ef]"
-              key={problem.id}
-              aria-label={'Open saved problem ' + problem.title}
-            >
+            <article className="border border-line bg-paper p-4" key={problem.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -136,7 +132,23 @@ function SavedProblems() {
                   {formatDate(problem.bookmarkedAt)}
                 </div>
               </div>
-            </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  href={'/problems/' + problem.slug}
+                  className="inline-flex min-h-9 items-center justify-center gap-2 border border-line bg-white px-3 text-[11px] font-extrabold text-ink hover:bg-[#f5f7ef]"
+                  aria-label={'Open saved problem ' + problem.title}
+                >
+                  <FileCode2 size={14} /> Workspace
+                </Link>
+                <Link
+                  href={'/problems/' + problem.slug + '/notes'}
+                  className="inline-flex min-h-9 items-center justify-center gap-2 border border-line bg-white px-3 text-[11px] font-extrabold text-ink hover:bg-[#f5f7ef]"
+                  aria-label={'Open private note for ' + problem.title}
+                >
+                  <StickyNote size={14} /> Open note
+                </Link>
+              </div>
+            </article>
           ))}
         </div>
       )}
@@ -245,6 +257,12 @@ export function ProfilePage() {
               className="inline-flex items-center gap-2 text-[12px] font-extrabold text-muted hover:text-ink"
             >
               <ArrowLeft size={15} /> Problems
+            </Link>
+            <Link
+              href="/notes"
+              className="inline-flex items-center gap-2 text-[12px] font-extrabold text-muted hover:text-ink"
+            >
+              <StickyNote size={15} /> View notes
             </Link>
             <Link href="/logout" className="text-[12px] font-extrabold text-muted hover:text-ink">
               Logout

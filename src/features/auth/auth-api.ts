@@ -45,9 +45,61 @@ export type SavedProblemsResponse = {
   items: SavedProblem[];
 };
 
+export type SavedNoteProblem = {
+  id: string;
+  title: string;
+  slug: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  progressStatus: 'SOLVED' | 'ATTEMPTED' | 'NOT_STARTED';
+  tags: { id: string; name: string; slug: string }[];
+};
+
+export type SavedNoteListItem = {
+  id: string;
+  contentPreview: string;
+  createdAt: string;
+  updatedAt: string;
+  problem: SavedNoteProblem;
+};
+
+export type SavedNotesResponse = {
+  items: SavedNoteListItem[];
+};
+
+export type SavedNoteDetailResponse = {
+  note: {
+    id: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  problem: {
+    id: string;
+    title: string;
+    slug: string;
+    description: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    timeLimitMs: number;
+    memoryLimitMb: number;
+    tags: { id: string; name: string; slug: string }[];
+  };
+  latestSubmission: {
+    id: string;
+    language: 'JAVASCRIPT' | 'PYTHON';
+    sourceCode: string;
+    status: string;
+    verdict: string | null;
+    runtimeMs: number | null;
+    createdAt: string;
+    completedAt: string | null;
+  } | null;
+};
+
 export const authQueryKeys = {
   me: ['auth', 'me'] as const,
   bookmarks: ['auth', 'bookmarks'] as const,
+  notes: ['auth', 'notes'] as const,
+  note: (slug: string) => ['auth', 'notes', slug] as const,
 };
 
 export function useLogin() {
@@ -83,5 +135,21 @@ export function useSavedProblems() {
   return useQuery({
     queryKey: authQueryKeys.bookmarks,
     queryFn: () => apiGet<SavedProblemsResponse>({ path: '/me/bookmarks' }),
+  });
+}
+
+export function useSavedNotes() {
+  return useQuery({
+    queryKey: authQueryKeys.notes,
+    queryFn: () => apiGet<SavedNotesResponse>({ path: '/me/notes' }),
+  });
+}
+
+export function useSavedNote(slug: string) {
+  return useQuery({
+    queryKey: authQueryKeys.note(slug),
+    queryFn: () => apiGet<SavedNoteDetailResponse>({ path: '/me/notes/' + slug }),
+    enabled: slug.length > 0,
+    retry: false,
   });
 }
