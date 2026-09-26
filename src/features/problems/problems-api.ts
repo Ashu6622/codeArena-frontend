@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api-client';
 
 export type ProblemDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
-export type ProblemLanguage = 'JAVASCRIPT' | 'PYTHON';
+export type ProblemLanguage = 'JAVASCRIPT' | 'PYTHON' | 'CPP';
 export type ProblemProgressStatus = 'SOLVED' | 'ATTEMPTED' | 'NOT_STARTED';
 
 export type ProblemTag = {

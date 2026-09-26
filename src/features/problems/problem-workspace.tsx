@@ -41,7 +41,10 @@ function formatDifficulty(difficulty: ProblemDetail['difficulty']) {
 }
 
 function formatLanguage(language: ProblemLanguageConfig['language']) {
-  return language === 'JAVASCRIPT' ? 'JavaScript' : 'Python';
+  if (language === 'JAVASCRIPT') return 'JavaScript';
+  if (language === 'PYTHON') return 'Python';
+  if (language === 'CPP') return 'C++';
+  return language;
 }
 
 function formatProgressStatus(status: NonNullable<ProblemDetail['progressStatus']>) {

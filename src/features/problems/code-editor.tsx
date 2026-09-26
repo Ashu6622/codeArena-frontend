@@ -11,6 +11,7 @@ type CodeEditorProps = {
 function toMonacoLanguage(language: string) {
   if (language === 'JAVASCRIPT') return 'javascript';
   if (language === 'PYTHON') return 'python';
+  if (language === 'CPP') return 'cpp';
   return 'plaintext';
 }
 

@@ -85,7 +85,7 @@ export type SavedNoteDetailResponse = {
   };
   latestSubmission: {
     id: string;
-    language: 'JAVASCRIPT' | 'PYTHON';
+    language: 'JAVASCRIPT' | 'PYTHON' | 'CPP';
     sourceCode: string;
     status: string;
     verdict: string | null;
