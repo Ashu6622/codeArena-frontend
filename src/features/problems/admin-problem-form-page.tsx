@@ -30,7 +30,7 @@ type EditableTestCase = {
 };
 
 const difficulties: ProblemDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
-const languages: ProblemLanguage[] = ['JAVASCRIPT', 'PYTHON'];
+const languages: ProblemLanguage[] = ['JAVASCRIPT', 'PYTHON', 'CPP'];
 
 const defaultStarterCode = `function solution(input) {
   // TODO: parse input and return the answer.

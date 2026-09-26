@@ -368,6 +368,7 @@ function AdminProblemEditForm({ problem }: { problem: AdminProblemDetail }) {
               >
                 <option value="JAVASCRIPT">JAVASCRIPT</option>
                 <option value="PYTHON">PYTHON</option>
+                <option value="CPP">CPP</option>
               </select>
             </label>
             <label className="grid gap-2 text-[12px] font-extrabold">
