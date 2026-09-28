@@ -1,0 +1,26 @@
+name: PR Pre-Merge Quality Gate (Frontend)
+
+on:
+  pull_request:
+    branches:
+      - main
+      - uat
+
+jobs:
+  pr-quality-and-test:
+    name: Validate Frontend Code & Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test & Validate Frontend
+        run: |
+          npm ci
+          npm run quality

@@ -22,7 +22,10 @@ export class ApiError extends Error {
 }
 
 function createUrl(path: string, query?: ApiRequestOptions['query']) {
-  const url = new URL(path, env.apiBaseUrl);
+  const base = env.apiBaseUrl.replace(/\/$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const url = new URL(`${base}${cleanPath}`);
+
   Object.entries(query ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
   });
